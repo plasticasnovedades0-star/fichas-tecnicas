@@ -1,18 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Eye } from 'lucide-react';
+import { supabase } from '../supabase/client';
 
 export default function OperarioView() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Datos mockeados por ahora (luego vendrán de Supabase)
-  const mockFiles = [
-    { id: 1, reference: 'REF-001', description: 'Manual de Ensamblaje', type: 'PDF' },
-    { id: 2, reference: 'REF-002', description: 'Guía de Mantenimiento', type: 'PDF' },
-  ];
+  useEffect(() => {
+    fetchFiles();
+  }, []);
 
-  const filteredFiles = mockFiles.filter(f => 
-    f.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.reference.toLowerCase().includes(searchTerm.toLowerCase())
+  async function fetchFiles() {
+    setLoading(true);
+    const { data, error } = await supabase.from('fichas').select('*');
+    if (error) {
+      console.error('Error fetching files:', error);
+    } else {
+      setFiles(data || []);
+    }
+    setLoading(false);
+  }
+
+  const filteredFiles = files.filter(f => 
+    (f.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (f.reference || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -36,41 +48,45 @@ export default function OperarioView() {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table className="file-list">
-            <thead>
-              <tr>
-                <th>Referencia</th>
-                <th>Descripción</th>
-                <th>Tipo</th>
-                <th style={{ textAlign: 'right' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFiles.map(file => (
-                <tr key={file.id}>
-                  <td style={{ fontWeight: 600 }}>{file.reference}</td>
-                  <td>{file.description}</td>
-                  <td>
-                    <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 600 }}>
-                      {file.type}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
-                      <Eye size={16} /> Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredFiles.length === 0 && (
+          {loading ? (
+             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos desde Supabase...</div>
+          ) : (
+            <table className="file-list">
+              <thead>
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    No se encontraron resultados
-                  </td>
+                  <th>Referencia</th>
+                  <th>Descripción</th>
+                  <th>Tipo</th>
+                  <th style={{ textAlign: 'right' }}>Acción</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredFiles.map(file => (
+                  <tr key={file.id}>
+                    <td style={{ fontWeight: 600 }}>{file.reference}</td>
+                    <td>{file.description}</td>
+                    <td>
+                      <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 600 }}>
+                        {file.type}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                        <Eye size={16} /> Ver
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredFiles.length === 0 && (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      No se encontraron resultados en la base de datos
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

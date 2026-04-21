@@ -1,6 +1,7 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
 import { Moon, Sun, Plus, Edit2, Trash2, Lock } from 'lucide-react';
+import { supabase } from '../supabase/client';
 
 export default function AdminDashboard() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
@@ -12,11 +13,27 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Mocks de administración
-  const mockFiles = [
-    { id: 1, reference: 'REF-001', description: 'Manual de Ensamblaje', type: 'PDF' },
-    { id: 2, reference: 'REF-002', description: 'Reporte de Ventas Q1', type: 'Excel' },
-  ];
+  // Estado de datos Supabase
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFiles();
+    }
+  }, [isAuthenticated]);
+
+  async function fetchFiles() {
+    setLoading(true);
+    // Asumimos que la tabla se llama 'fichas'. Si es distinto, cambiar a 'archivos' o 'productos'.
+    const { data, error } = await supabase.from('fichas').select('*');
+    if (error) {
+      console.error('Error fetching files:', error);
+    } else {
+      setFiles(data || []);
+    }
+    setLoading(false);
+  }
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -104,38 +121,42 @@ export default function AdminDashboard() {
         </div>
 
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table className="file-list">
-            <thead>
-              <tr>
-                <th>Referencia</th>
-                <th>Descripción</th>
-                <th>Tipo</th>
-                <th style={{ textAlign: 'right' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockFiles.filter(f => f.description.toLowerCase().includes(searchTerm.toLowerCase())).map(file => (
-                <tr key={file.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{file.reference}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{file.description}</td>
-                  <td style={{ color: 'var(--text-main)' }}>{file.type}</td>
-                  <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    <button className="btn-primary" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
-                      <Edit2 size={16} />
-                    </button>
-                    <button className="btn-primary" style={{ padding: '0.5rem', background: '#ef4444' }}>
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {mockFiles.length === 0 && (
+          {loading ? (
+             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos desde Supabase...</div>
+          ) : (
+            <table className="file-list">
+              <thead>
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay archivos disponibles</td>
+                  <th>Referencia</th>
+                  <th>Descripción</th>
+                  <th>Tipo</th>
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {files.filter(f => (f.description || '').toLowerCase().includes(searchTerm.toLowerCase())).map(file => (
+                  <tr key={file.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{file.reference}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{file.description}</td>
+                    <td style={{ color: 'var(--text-main)' }}>{file.type}</td>
+                    <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button className="btn-primary" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
+                        <Edit2 size={16} />
+                      </button>
+                      <button className="btn-primary" style={{ padding: '0.5rem', background: '#ef4444' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {files.length === 0 && (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay archivos disponibles en Supabase</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
