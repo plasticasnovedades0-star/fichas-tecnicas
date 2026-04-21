@@ -1,6 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { ThemeProvider } from './context/ThemeContext';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 
 // Importación de Componentes Placeholder (los crearemos enseguida)
 import Navbar from './components/Navbar';

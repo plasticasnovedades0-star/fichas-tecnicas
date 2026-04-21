@@ -74,12 +74,22 @@ export default function ComercialView() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button className="btn-primary" style={{ padding: '0.5rem', background: 'transparent', color: 'var(--primary-color)', border: '1px solid var(--primary-color)' }}>
-                        <Eye size={16} />
-                      </button>
-                      <button className="btn-primary" style={{ padding: '0.5rem' }}>
-                        <Download size={16} />
-                      </button>
+                      {file.file_url ? (
+                        <>
+                          <a href={file.file_url} target="_blank" rel="noreferrer">
+                            <button className="btn-primary" style={{ padding: '0.5rem', background: 'transparent', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', cursor: 'pointer' }}>
+                              <Eye size={16} />
+                            </button>
+                          </a>
+                          <a href={file.file_url} download target="_blank" rel="noreferrer">
+                            <button className="btn-primary" style={{ padding: '0.5rem', cursor: 'pointer' }}>
+                              <Download size={16} />
+                            </button>
+                          </a>
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', padding: '0.5rem' }}>Sin archivo</span>
+                      )}
                     </td>
                   </tr>
                 ))}

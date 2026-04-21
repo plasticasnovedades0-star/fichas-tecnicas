@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
-import { Moon, Sun, Plus, Edit2, Trash2, Lock, X } from 'lucide-react';
+import { Moon, Sun, Plus, Edit2, Trash2, Lock, X, Eye } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
 export default function AdminDashboard() {
@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   // Estados para el Modal y Creación
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newFile, setNewFile] = useState({ reference: '', description: '', type: 'PDF' });
+  const [selectedFileObj, setSelectedFileObj] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -41,21 +42,52 @@ export default function AdminDashboard() {
 
   const handleCreateFile = async (e) => {
     e.preventDefault();
+    if (!selectedFileObj) {
+      alert('Por favor selecciona un archivo primero.');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    const { error } = await supabase.from('fichas').insert([
+    // 1. Subir a Supabase Storage (Bucket "archivos")
+    const fileExt = selectedFileObj.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('archivos')
+      .upload(fileName, selectedFileObj);
+      
+    if (uploadError) {
+      setIsSubmitting(false);
+      console.error('Error subiendo archivo físico:', uploadError);
+      alert('Error subiendo archivo físico. Verifica que tu bucket "archivos" sea PÚBLICO y que no tenga restricciones RLS estrictas (o actualiza tus políticas).');
+      return;
+    }
+    
+    // 2. Obtener URL pública
+    const { data: publicUrlData } = supabase.storage
+      .from('archivos')
+      .getPublicUrl(fileName);
+      
+    const fileUrl = publicUrlData.publicUrl;
+    
+    // 3. Crear el registro en la base de datos apuntando a la URL
+    const { error: dbError } = await supabase.from('fichas').insert([
       { 
         reference: newFile.reference, 
         description: newFile.description, 
-        type: newFile.type 
+        type: newFile.type,
+        file_url: fileUrl
       }
     ]);
 
-    if (error) {
-      console.error('Error insertando ficha:', error);
-      alert('Hubo un error al guardar. Revisa la consola o tu base de datos Supabase.');
+    if (dbError) {
+      console.error('Error insertando ficha:', dbError);
+      alert('Hubo un error al guardar en la base de datos Supabase.');
     } else {
       setNewFile({ reference: '', description: '', type: 'PDF' }); // limpiar
+      setSelectedFileObj(null); // limpiar archivo
+      document.getElementById('fileUploadInput').value = ''; 
       setIsModalOpen(false); // cerrar modal
       fetchFiles(); // refrescar lista
     }
@@ -170,8 +202,23 @@ export default function AdminDashboard() {
                   <option value="Video">Video</option>
                 </select>
               </div>
+              
+              {/* CAMPO DE SELECCIÓN DE ARCHIVO */}
+              <div>
+                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Documento / Archivo Físico</label>
+                 <input 
+                   id="fileUploadInput"
+                   type="file"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp4"
+                   className="input-base"
+                   style={{ padding: '0.5rem' }}
+                   required
+                   onChange={(e) => setSelectedFileObj(e.target.files[0])}
+                 />
+              </div>
+
               <button disabled={isSubmitting} type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
-                {isSubmitting ? 'Guardando...' : 'Crear Registro'}
+                {isSubmitting ? 'Subiendo archivo...' : 'Crear Registro'}
               </button>
             </form>
           </div>
@@ -219,6 +266,7 @@ export default function AdminDashboard() {
                   <th>Referencia</th>
                   <th>Descripción</th>
                   <th>Tipo</th>
+                  <th style={{ textAlign: 'center' }}>Ver</th>
                   <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
@@ -228,6 +276,15 @@ export default function AdminDashboard() {
                     <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{file.reference}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{file.description}</td>
                     <td style={{ color: 'var(--text-main)' }}>{file.type}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {file.file_url ? (
+                        <a href={file.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>
+                          <Eye size={18} />
+                        </a>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Sin archivo</span>
+                      )}
+                    </td>
                     <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button className="btn-primary" title="Próximamente" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
                         <Edit2 size={16} />
@@ -240,7 +297,7 @@ export default function AdminDashboard() {
                 ))}
                 {files.length === 0 && (
                   <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay archivos disponibles en Supabase</td>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay archivos disponibles en Supabase</td>
                   </tr>
                 )}
               </tbody>

@@ -71,9 +71,17 @@ export default function OperarioView() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
-                        <Eye size={16} /> Ver
-                      </button>
+                      {file.file_url ? (
+                        <a href={file.file_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                          <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                            <Eye size={16} /> Ver
+                          </button>
+                        </a>
+                      ) : (
+                        <button disabled className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', opacity: 0.5 }}>
+                          Sin Archivo
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
