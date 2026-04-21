@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
-import { Moon, Sun, Plus, Edit2, Trash2, Lock } from 'lucide-react';
+import { Moon, Sun, Plus, Edit2, Trash2, Lock, X } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
 export default function AdminDashboard() {
@@ -17,6 +17,11 @@ export default function AdminDashboard() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Estados para el Modal y Creación
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newFile, setNewFile] = useState({ reference: '', description: '', type: 'PDF' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchFiles();
@@ -25,7 +30,6 @@ export default function AdminDashboard() {
 
   async function fetchFiles() {
     setLoading(true);
-    // Asumimos que la tabla se llama 'fichas'. Si es distinto, cambiar a 'archivos' o 'productos'.
     const { data, error } = await supabase.from('fichas').select('*');
     if (error) {
       console.error('Error fetching files:', error);
@@ -34,6 +38,30 @@ export default function AdminDashboard() {
     }
     setLoading(false);
   }
+
+  const handleCreateFile = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const { error } = await supabase.from('fichas').insert([
+      { 
+        reference: newFile.reference, 
+        description: newFile.description, 
+        type: newFile.type 
+      }
+    ]);
+
+    if (error) {
+      console.error('Error insertando ficha:', error);
+      alert('Hubo un error al guardar. Revisa la consola o tu base de datos Supabase.');
+    } else {
+      setNewFile({ reference: '', description: '', type: 'PDF' }); // limpiar
+      setIsModalOpen(false); // cerrar modal
+      fetchFiles(); // refrescar lista
+    }
+    
+    setIsSubmitting(false);
+  };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -88,7 +116,68 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ position: 'relative' }}>
+      {/* Modal Nueva Ficha */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <div className="card-glass" style={{ width: '90%', maxWidth: '500px', padding: '2rem', position: 'relative' }}>
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)' }}
+            >
+              <X size={24} />
+            </button>
+            <h2 style={{ marginBottom: '1.5rem' }}>Subir Nueva Ficha</h2>
+            <form onSubmit={handleCreateFile} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Referencia</label>
+                <input 
+                  type="text" 
+                  className="input-base" 
+                  placeholder="Ej: REF-001" 
+                  required
+                  value={newFile.reference}
+                  onChange={(e) => setNewFile({...newFile, reference: e.target.value})}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Descripción</label>
+                <input 
+                  type="text" 
+                  className="input-base" 
+                  placeholder="Manual de uso..." 
+                  required
+                  value={newFile.description}
+                  onChange={(e) => setNewFile({...newFile, description: e.target.value})}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Tipo de Archivo</label>
+                <select 
+                  className="input-base"
+                  style={{ cursor: 'pointer' }}
+                  value={newFile.type}
+                  onChange={(e) => setNewFile({...newFile, type: e.target.value})}
+                >
+                  <option value="PDF">PDF</option>
+                  <option value="Excel">Excel</option>
+                  <option value="Word">Word</option>
+                  <option value="Imagen">Imagen</option>
+                  <option value="Video">Video</option>
+                </select>
+              </div>
+              <button disabled={isSubmitting} type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
+                {isSubmitting ? 'Guardando...' : 'Crear Registro'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Panel Superior Admin */}
       <div className="card-glass" style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -101,7 +190,7 @@ export default function AdminDashboard() {
             {isDark ? <Sun size={20} /> : <Moon size={20} />} 
             <span style={{ marginLeft: '0.5rem' }}>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
           </button>
-          <button className="btn-primary" style={{ flex: '1 1 auto', maxWidth: 'max-content' }}>
+          <button className="btn-primary" style={{ flex: '1 1 auto', maxWidth: 'max-content' }} onClick={() => setIsModalOpen(true)}>
             <Plus size={20} /> Subir Archivo
           </button>
         </div>
@@ -140,10 +229,10 @@ export default function AdminDashboard() {
                     <td style={{ color: 'var(--text-muted)' }}>{file.description}</td>
                     <td style={{ color: 'var(--text-main)' }}>{file.type}</td>
                     <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button className="btn-primary" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
+                      <button className="btn-primary" title="Próximamente" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
                         <Edit2 size={16} />
                       </button>
-                      <button className="btn-primary" style={{ padding: '0.5rem', background: '#ef4444' }}>
+                      <button className="btn-primary" title="Próximamente" style={{ padding: '0.5rem', background: '#ef4444' }}>
                         <Trash2 size={16} />
                       </button>
                     </td>
