@@ -7,10 +7,6 @@ export default function ComercialView() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
   async function fetchFiles() {
     setLoading(true);
     const { data, error } = await supabase.from('fichas').select('*');
@@ -21,6 +17,10 @@ export default function ComercialView() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
 
   const filteredFiles = files.filter(f => 
     (f.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
