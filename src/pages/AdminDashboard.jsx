@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
-import { Moon, Sun, Plus, Edit2, Trash2, Lock, X, Eye } from 'lucide-react';
+import { Moon, Sun, Plus, Edit2, Trash2, Lock, X, Eye, Search } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
 export default function AdminDashboard() {
@@ -17,9 +17,10 @@ export default function AdminDashboard() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Estados para el Modal y Creación
+  // Estados para el Modal (Creación y Edición)
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newFile, setNewFile] = useState({ reference: '', description: '', type: 'PDF' });
+  const [editingFile, setEditingFile] = useState(null);
+  const [formData, setFormData] = useState({ reference: '', description: '', type: 'PDF' });
   const [selectedFileObj, setSelectedFileObj] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,7 +32,7 @@ export default function AdminDashboard() {
 
   async function fetchFiles() {
     setLoading(true);
-    const { data, error } = await supabase.from('fichas').select('*');
+    const { data, error } = await supabase.from('fichas').select('*').order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching files:', error);
     } else {
@@ -40,59 +41,87 @@ export default function AdminDashboard() {
     setLoading(false);
   }
 
-  const handleCreateFile = async (e) => {
-    e.preventDefault();
-    if (!selectedFileObj) {
-      alert('Por favor selecciona un archivo primero.');
-      return;
+  const handleOpenModal = (file = null) => {
+    if (file) {
+      setEditingFile(file);
+      setFormData({ reference: file.reference, description: file.description, type: file.type });
+    } else {
+      setEditingFile(null);
+      setFormData({ reference: '', description: '', type: 'PDF' });
     }
-    
+    setSelectedFileObj(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsSubmitting(true);
     
-    // 1. Subir a Supabase Storage (Bucket "archivos")
-    const fileExt = selectedFileObj.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('archivos')
-      .upload(fileName, selectedFileObj);
+    let fileUrl = editingFile ? editingFile.file_url : null;
+
+    // 1. Si se seleccionó un nuevo archivo, subirlo
+    if (selectedFileObj) {
+      const fileExt = selectedFileObj.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       
-    if (uploadError) {
+      const { error: uploadError } = await supabase.storage
+        .from('archivos')
+        .upload(fileName, selectedFileObj);
+        
+      if (uploadError) {
+        setIsSubmitting(false);
+        alert('Error subiendo archivo físico: ' + uploadError.message);
+        return;
+      }
+      
+      const { data: publicUrlData } = supabase.storage.from('archivos').getPublicUrl(fileName);
+      fileUrl = publicUrlData.publicUrl;
+    } else if (!editingFile && !selectedFileObj) {
       setIsSubmitting(false);
-      console.error('Error subiendo archivo físico:', uploadError);
-      alert('Error subiendo archivo físico. Verifica que tu bucket "archivos" sea PÚBLICO y que no tenga restricciones RLS estrictas (o actualiza tus políticas).');
+      alert('Por favor selecciona un archivo.');
       return;
     }
-    
-    // 2. Obtener URL pública
-    const { data: publicUrlData } = supabase.storage
-      .from('archivos')
-      .getPublicUrl(fileName);
-      
-    const fileUrl = publicUrlData.publicUrl;
-    
-    // 3. Crear el registro en la base de datos apuntando a la URL
-    const { error: dbError } = await supabase.from('fichas').insert([
-      { 
-        reference: newFile.reference, 
-        description: newFile.description, 
-        type: newFile.type,
-        file_url: fileUrl
-      }
-    ]);
 
-    if (dbError) {
-      console.error('Error insertando ficha:', dbError);
-      alert('Hubo un error al guardar en la base de datos Supabase.');
+    // 2. Insertar o Actualizar en DB
+    if (editingFile) {
+      const { error: dbError } = await supabase
+        .from('fichas')
+        .update({ 
+          reference: formData.reference, 
+          description: formData.description, 
+          type: formData.type,
+          file_url: fileUrl 
+        })
+        .eq('id', editingFile.id);
+
+      if (dbError) alert('Error al actualizar: ' + dbError.message);
     } else {
-      setNewFile({ reference: '', description: '', type: 'PDF' }); // limpiar
-      setSelectedFileObj(null); // limpiar archivo
-      document.getElementById('fileUploadInput').value = ''; 
-      setIsModalOpen(false); // cerrar modal
-      fetchFiles(); // refrescar lista
+      const { error: dbError } = await supabase.from('fichas').insert([
+        { 
+          reference: formData.reference, 
+          description: formData.description, 
+          type: formData.type,
+          file_url: fileUrl
+        }
+      ]);
+
+      if (dbError) alert('Error al crear: ' + dbError.message);
     }
-    
+
     setIsSubmitting(false);
+    setIsModalOpen(false);
+    fetchFiles();
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Estás seguro de eliminar este registro permanentemente?')) {
+      const { error } = await supabase.from('fichas').delete().eq('id', id);
+      if (error) {
+        alert('Error al eliminar: ' + error.message);
+      } else {
+        fetchFiles();
+      }
+    }
   };
 
   const handleLogin = (e) => {
@@ -104,6 +133,12 @@ export default function AdminDashboard() {
       setError('Usuario o contraseña incorrectos');
     }
   };
+
+  // Filtrado mejorado (Referencia + Descripción)
+  const filteredFiles = files.filter(f => 
+    (f.reference || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (f.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!isAuthenticated) {
     return (
@@ -149,7 +184,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="container" style={{ position: 'relative' }}>
-      {/* Modal Nueva Ficha */}
+      {/* Modal Nueva/Editar Ficha */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -163,8 +198,8 @@ export default function AdminDashboard() {
             >
               <X size={24} />
             </button>
-            <h2 style={{ marginBottom: '1.5rem' }}>Subir Nueva Ficha</h2>
-            <form onSubmit={handleCreateFile} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ marginBottom: '1.5rem' }}>{editingFile ? 'Editar Ficha' : 'Subir Nueva Ficha'}</h2>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Referencia</label>
                 <input 
@@ -172,8 +207,8 @@ export default function AdminDashboard() {
                   className="input-base" 
                   placeholder="Ej: REF-001" 
                   required
-                  value={newFile.reference}
-                  onChange={(e) => setNewFile({...newFile, reference: e.target.value})}
+                  value={formData.reference}
+                  onChange={(e) => setFormData({...formData, reference: e.target.value})}
                 />
               </div>
               <div>
@@ -183,8 +218,8 @@ export default function AdminDashboard() {
                   className="input-base" 
                   placeholder="Manual de uso..." 
                   required
-                  value={newFile.description}
-                  onChange={(e) => setNewFile({...newFile, description: e.target.value})}
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
                 />
               </div>
               <div>
@@ -192,8 +227,8 @@ export default function AdminDashboard() {
                 <select 
                   className="input-base"
                   style={{ cursor: 'pointer' }}
-                  value={newFile.type}
-                  onChange={(e) => setNewFile({...newFile, type: e.target.value})}
+                  value={formData.type}
+                  onChange={(e) => setFormData({...formData, type: e.target.value})}
                 >
                   <option value="PDF">PDF</option>
                   <option value="Excel">Excel</option>
@@ -203,22 +238,22 @@ export default function AdminDashboard() {
                 </select>
               </div>
               
-              {/* CAMPO DE SELECCIÓN DE ARCHIVO */}
               <div>
-                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Documento / Archivo Físico</label>
+                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                   {editingFile ? 'Reemplazar Archivo (Opcional)' : 'Seleccionar Archivo'}
+                 </label>
                  <input 
-                   id="fileUploadInput"
                    type="file"
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp4"
                    className="input-base"
                    style={{ padding: '0.5rem' }}
-                   required
+                   required={!editingFile}
                    onChange={(e) => setSelectedFileObj(e.target.files[0])}
                  />
               </div>
 
               <button disabled={isSubmitting} type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
-                {isSubmitting ? 'Subiendo archivo...' : 'Crear Registro'}
+                {isSubmitting ? 'Guardando...' : (editingFile ? 'Guardar Cambios' : 'Crear Registro')}
               </button>
             </form>
           </div>
@@ -237,7 +272,7 @@ export default function AdminDashboard() {
             {isDark ? <Sun size={20} /> : <Moon size={20} />} 
             <span style={{ marginLeft: '0.5rem' }}>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
           </button>
-          <button className="btn-primary" style={{ flex: '1 1 auto', maxWidth: 'max-content' }} onClick={() => setIsModalOpen(true)}>
+          <button className="btn-primary" style={{ flex: '1 1 auto', maxWidth: 'max-content' }} onClick={() => handleOpenModal()}>
             <Plus size={20} /> Subir Archivo
           </button>
         </div>
@@ -246,19 +281,22 @@ export default function AdminDashboard() {
       <div className="card-glass">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Catálogo de Archivos</h3>
-          <input 
-            type="text" 
-            className="input-base" 
-            placeholder="Buscar para editar..." 
-            style={{ maxWidth: '100%', flex: '1 1 250px' }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '100%' }}>
+            <Search size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '0.8rem', color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              className="input-base" 
+              placeholder="Buscar por referencia o descripción..." 
+              style={{ paddingLeft: '2.5rem' }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {loading ? (
-             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos desde Supabase...</div>
+             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos...</div>
           ) : (
             <table className="file-list">
               <thead>
@@ -271,7 +309,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {files.filter(f => (f.description || '').toLowerCase().includes(searchTerm.toLowerCase())).map(file => (
+                {filteredFiles.map(file => (
                   <tr key={file.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{file.reference}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{file.description}</td>
@@ -286,18 +324,28 @@ export default function AdminDashboard() {
                       )}
                     </td>
                     <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button className="btn-primary" title="Próximamente" style={{ padding: '0.5rem', background: 'var(--text-muted)' }}>
+                      <button 
+                        className="btn-primary" 
+                        style={{ padding: '0.5rem', background: 'var(--primary-color)' }}
+                        onClick={() => handleOpenModal(file)}
+                      >
                         <Edit2 size={16} />
                       </button>
-                      <button className="btn-primary" title="Próximamente" style={{ padding: '0.5rem', background: '#ef4444' }}>
+                      <button 
+                        className="btn-primary" 
+                        style={{ padding: '0.5rem', background: '#ef4444' }}
+                        onClick={() => handleDelete(file.id)}
+                      >
                         <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {files.length === 0 && (
+                {filteredFiles.length === 0 && (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay archivos disponibles en Supabase</td>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                      No se encontraron resultados
+                    </td>
                   </tr>
                 )}
               </tbody>
