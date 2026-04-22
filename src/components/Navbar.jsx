@@ -20,7 +20,7 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand" onClick={closeMenu}>
-        <img src="/logo.png" alt="Logo" style={{ height: '35px', borderRadius: '4px' }} />
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" style={{ height: '35px', borderRadius: '4px' }} />
         <span>Fichas Técnicas</span> 
       </Link>
       
