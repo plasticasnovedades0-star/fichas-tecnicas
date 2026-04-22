@@ -1,0 +1,16 @@
+{
+  "short_name": "Fichas NP",
+  "name": "Fichas Técnicas Novedades Plásticas",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#3b82f6",
+  "background_color": "#ffffff"
+}

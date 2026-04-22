@@ -20,8 +20,8 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand" onClick={closeMenu}>
-        <Layers size={28} />
-        <span>Fichas Técnicas Novedades Plásticas</span> 
+        <img src="/logo.png" alt="Logo" style={{ height: '35px', borderRadius: '4px' }} />
+        <span>Fichas Técnicas</span> 
       </Link>
       
       <button className="hamburger" onClick={() => setIsOpen(!isOpen)}>
