@@ -164,18 +164,28 @@ a {
 .input-base {
   width: 100%;
   padding: 0.8rem 1.2rem;
-  border-radius: 0.5rem;
+  border-radius: 0.8rem;
   border: 1px solid var(--glass-border);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-main);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 1rem;
+}
+
+/* Evitar fondo blanco en autocompletado del navegador */
+.input-base:-webkit-autofill,
+.input-base:-webkit-autofill:hover, 
+.input-base:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-main);
+  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .input-base:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
 }
 
 /* Botón Responsivo Mobile-First */
