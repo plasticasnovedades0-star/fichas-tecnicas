@@ -272,7 +272,7 @@ export default function AdminDashboard() {
             {isDark ? <Sun size={20} /> : <Moon size={20} />} 
             <span style={{ marginLeft: '0.5rem' }}>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
           </button>
-          <a href="http://192.168.2.119:5174/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', flex: '1 1 auto', maxWidth: 'max-content' }}>
+          <a href="https://192.168.2.119:5174/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', flex: '1 1 auto', maxWidth: 'max-content' }}>
             <button className="btn-primary" style={{ width: '100%', backgroundColor: '#10b981' }}>
               <Activity size={20} /> Monitor Elemental
             </button>
