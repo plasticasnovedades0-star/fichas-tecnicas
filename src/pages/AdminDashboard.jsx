@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
-import { Moon, Sun, Plus, Edit2, Trash2, Lock, X, Eye, Search } from 'lucide-react';
+import { Moon, Sun, Plus, Edit2, Trash2, Lock, X, Eye, Search, Activity } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
 export default function AdminDashboard() {
@@ -272,6 +272,11 @@ export default function AdminDashboard() {
             {isDark ? <Sun size={20} /> : <Moon size={20} />} 
             <span style={{ marginLeft: '0.5rem' }}>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
           </button>
+          <a href="http://localhost:5173/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', flex: '1 1 auto', maxWidth: 'max-content' }}>
+            <button className="btn-primary" style={{ width: '100%', backgroundColor: '#10b981' }}>
+              <Activity size={20} /> Monitor Elemental
+            </button>
+          </a>
           <button className="btn-primary" style={{ flex: '1 1 auto', maxWidth: 'max-content' }} onClick={() => handleOpenModal()}>
             <Plus size={20} /> Subir Archivo
           </button>
