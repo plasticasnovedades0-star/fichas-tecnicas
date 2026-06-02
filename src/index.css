@@ -226,6 +226,10 @@ a {
 }
 
 /* Tablas Responsivas para listar los archivos */
+.table-responsive {
+  width: 100%;
+}
+
 .file-list {
   width: 100%;
   border-collapse: collapse;
@@ -244,6 +248,114 @@ a {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Badges de tipo */
+.type-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.type-pdf {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.type-excel {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+/* Botón Versión compacto */
+.btn-version {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: auto;
+}
+
+/* Acción td */
+.td-action {
+  text-align: right;
+}
+
+/* ===== RESPONSIVE: Tabla a Tarjetas en Móvil ===== */
+@media (max-width: 768px) {
+  .file-list thead {
+    display: none;
+  }
+
+  .file-list,
+  .file-list tbody {
+    display: block;
+  }
+
+  .file-list tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--glass-border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: var(--card-bg);
+  }
+
+  .file-list td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    padding: 0.5rem 0;
+    text-align: left !important;
+  }
+
+  .file-list td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-right: 1rem;
+  }
+
+  .file-list td:not(:last-child) {
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  .td-action {
+    text-align: right !important;
+    justify-content: flex-end !important;
+    padding-top: 0.75rem !important;
+  }
+
+  .btn-version {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-list tr {
+    padding: 0.8rem;
+  }
+
+  .file-list td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .file-list td::before {
+    margin-right: 0;
+  }
+
+  .td-action {
+    align-items: stretch !important;
+  }
 }
 
 /* Flex utilities */

@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Search, Eye } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
+// Detecta si el tipo es Excel (puede venir como "Excel" o "Sobresalir")
+const isExcelType = (type) => {
+  const t = (type || '').toLowerCase();
+  return t === 'excel' || t === 'sobresalir';
+};
+
 export default function OperarioView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [files, setFiles] = useState([]);
@@ -30,8 +36,7 @@ export default function OperarioView() {
   );
 
   const visibleFiles = files.filter(f => {
-    const isExcel = (f.type || '').toLowerCase() === 'excel';
-    if (isExcel && referencesWithPDF.has((f.reference || '').toLowerCase())) {
+    if (isExcelType(f.type) && referencesWithPDF.has((f.reference || '').toLowerCase())) {
       return false; // Ocultar Excel si existe PDF con la misma referencia
     }
     return true;
@@ -62,7 +67,7 @@ export default function OperarioView() {
           />
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           {loading ? (
              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos desde Supabase...</div>
           ) : (
@@ -78,22 +83,22 @@ export default function OperarioView() {
               <tbody>
                 {filteredFiles.map(file => (
                   <tr key={file.id}>
-                    <td style={{ fontWeight: 600 }}>{file.reference}</td>
-                    <td>{file.description}</td>
-                    <td>
-                      <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <td data-label="Referencia" style={{ fontWeight: 600 }}>{file.reference}</td>
+                    <td data-label="Descripción">{file.description}</td>
+                    <td data-label="Tipo">
+                      <span className={`type-badge ${isExcelType(file.type) ? 'type-excel' : 'type-pdf'}`}>
                         {file.type}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="Acción" className="td-action">
                       {file.file_url ? (
                         <a href={file.file_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-                          <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', cursor: 'pointer' }}>
-                            <Eye size={16} /> Ver
+                          <button className="btn-primary btn-version">
+                            <Eye size={16} /> Versión
                           </button>
                         </a>
                       ) : (
-                        <button disabled className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', opacity: 0.5 }}>
+                        <button disabled className="btn-primary btn-version" style={{ opacity: 0.5 }}>
                           Sin Archivo
                         </button>
                       )}

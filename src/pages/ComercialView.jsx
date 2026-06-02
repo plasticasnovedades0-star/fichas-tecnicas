@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Search, Eye, Download } from 'lucide-react';
 import { supabase } from '../supabase/client';
 
+// Detecta si el tipo es Excel (puede venir como "Excel" o "Sobresalir")
+const isExcelType = (type) => {
+  const t = (type || '').toLowerCase();
+  return t === 'excel' || t === 'sobresalir';
+};
+
 export default function ComercialView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [files, setFiles] = useState([]);
@@ -30,8 +36,7 @@ export default function ComercialView() {
   );
 
   const visibleFiles = files.filter(f => {
-    const isExcel = (f.type || '').toLowerCase() === 'excel';
-    if (isExcel && referencesWithPDF.has((f.reference || '').toLowerCase())) {
+    if (isExcelType(f.type) && referencesWithPDF.has((f.reference || '').toLowerCase())) {
       return false; // Ocultar Excel si existe PDF con la misma referencia
     }
     return true;
@@ -61,7 +66,7 @@ export default function ComercialView() {
           />
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           {loading ? (
              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando datos desde Supabase...</div>
           ) : (
@@ -77,20 +82,16 @@ export default function ComercialView() {
               <tbody>
                 {filteredFiles.map(file => (
                   <tr key={file.id}>
-                    <td style={{ fontWeight: 600 }}>{file.reference}</td>
-                    <td>{file.description}</td>
-                    <td>
-                      <span style={{ 
-                        background: file.type === 'PDF' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
-                        color: file.type === 'PDF' ? '#ef4444' : '#10b981', 
-                        padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 600 
-                      }}>
+                    <td data-label="Referencia" style={{ fontWeight: 600 }}>{file.reference}</td>
+                    <td data-label="Descripción">{file.description}</td>
+                    <td data-label="Tipo">
+                      <span className={`type-badge ${isExcelType(file.type) ? 'type-excel' : 'type-pdf'}`}>
                         {file.type}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <td data-label="Acciones" className="td-action">
                       {file.file_url ? (
-                        <>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                           <a href={file.file_url} target="_blank" rel="noreferrer">
                             <button className="btn-primary" style={{ padding: '0.5rem', background: 'transparent', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', cursor: 'pointer' }}>
                               <Eye size={16} />
@@ -101,7 +102,7 @@ export default function ComercialView() {
                               <Download size={16} />
                             </button>
                           </a>
-                        </>
+                        </div>
                       ) : (
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', padding: '0.5rem' }}>Sin archivo</span>
                       )}
