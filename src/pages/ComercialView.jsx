@@ -54,13 +54,12 @@ export default function ComercialView() {
           Vista Comercial
         </h2>
         
-        <div style={{ position: 'relative', marginBottom: '2rem' }}>
-          <Search size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '1rem', color: 'var(--text-muted)' }} />
+        <div className="search-wrapper">
+          <Search size={20} className="search-icon" />
           <input 
             type="text"
-            className="input-base"
+            className="input-base search-input"
             placeholder="Buscar por descripción o referencia..."
-            style={{ paddingLeft: '3rem' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
