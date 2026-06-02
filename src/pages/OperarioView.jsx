@@ -22,7 +22,22 @@ export default function OperarioView() {
     fetchFiles();
   }, []);
 
-  const filteredFiles = files.filter(f => 
+  // Referencias que ya tienen un PDF → los Excel con esa referencia se ocultan
+  const referencesWithPDF = new Set(
+    files
+      .filter(f => (f.type || '').toLowerCase() === 'pdf')
+      .map(f => (f.reference || '').toLowerCase())
+  );
+
+  const visibleFiles = files.filter(f => {
+    const isExcel = (f.type || '').toLowerCase() === 'excel';
+    if (isExcel && referencesWithPDF.has((f.reference || '').toLowerCase())) {
+      return false; // Ocultar Excel si existe PDF con la misma referencia
+    }
+    return true;
+  });
+
+  const filteredFiles = visibleFiles.filter(f => 
     (f.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (f.reference || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
