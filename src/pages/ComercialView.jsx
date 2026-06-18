@@ -96,7 +96,7 @@ export default function ComercialView() {
                               <Eye size={16} />
                             </button>
                           </a>
-                          <a href={file.file_url} download target="_blank" rel="noreferrer">
+                          <a href={file.file_url} download={file.file_url.split('/').pop()} target="_blank" rel="noreferrer">
                             <button className="btn-primary" style={{ padding: '0.5rem', cursor: 'pointer' }}>
                               <Download size={16} />
                             </button>
