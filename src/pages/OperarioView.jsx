@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase/client';
 
 // Detecta si el tipo es Excel (puede venir como "Excel" o "Sobresalir")
@@ -9,7 +10,9 @@ const isExcelType = (type) => {
 };
 
 export default function OperarioView() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const refParam = (searchParams.get('ref') || '').trim();
+  const [searchTerm, setSearchTerm] = useState(refParam);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +31,12 @@ export default function OperarioView() {
     fetchFiles();
   }, []);
 
+  // Si la URL trae ?ref= (numeral de máquina del dashboard), la escribe
+  // automáticamente en la barra de búsqueda para que aparezca la ficha.
+  useEffect(() => {
+    if (refParam) setSearchTerm(refParam);
+  }, [refParam]);
+
   // Referencias que ya tienen un PDF → los Excel con esa referencia se ocultan
   const referencesWithPDF = new Set(
     files
@@ -42,6 +51,11 @@ export default function OperarioView() {
     return true;
   });
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSearchParams({}, { replace: true });
+  };
+
   const filteredFiles = visibleFiles.filter(f => 
     (f.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (f.reference || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -54,7 +68,28 @@ export default function OperarioView() {
           Vista Operario 
           <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>(Solo lectura)</span>
         </h2>
-        
+
+        {refParam && (
+          <div
+            style={{
+              marginBottom: '1rem', padding: '0.6rem 1rem', borderRadius: '0.6rem',
+              border: '1px solid var(--primary-color)', background: 'color-mix(in srgb, var(--primary-color) 8%, transparent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem'
+            }}
+          >
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
+              <strong>Ficha del producto:</strong> {refParam}
+            </span>
+            <button
+              onClick={clearFilters}
+              className="btn-primary btn-version"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              <X size={14} /> Limpiar
+            </button>
+          </div>
+        )}
+
         <div className="search-wrapper">
           <Search size={20} className="search-icon" />
           <input 
